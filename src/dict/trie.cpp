@@ -1,5 +1,4 @@
-/* -*-C-*-
- ********************************************************************************
+/******************************************************************************
  *
  * File:         trie.cpp  (Formerly trie.c)
  * Description:  Functions to build a trie data structure.
@@ -16,14 +15,13 @@
  ** See the License for the specific language governing permissions and
  ** limitations under the License.
  *
- *********************************************************************************/
+ *****************************************************************************/
 /*----------------------------------------------------------------------
               I n c l u d e s
 ----------------------------------------------------------------------*/
 
 #include "trie.h"
 
-#include "callcpp.h"
 #include "dawg.h"
 #include "dict.h"
 #include <tesseract/genericvector.h>
@@ -268,7 +266,7 @@ bool Trie::add_word_to_dawg(const WERD_CHOICE &word,
 NODE_REF Trie::new_dawg_node() {
   auto *node = new TRIE_NODE_RECORD();
   nodes_.push_back(node);
-  return nodes_.length() - 1;
+  return nodes_.size() - 1;
 }
 
 // Sort function to sort words by decreasing order of length.

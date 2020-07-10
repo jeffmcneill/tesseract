@@ -47,15 +47,6 @@ extern "C" {
 
 #ifdef TESS_CAPI_INCLUDE_BASEAPI
 typedef tesseract::TessResultRenderer TessResultRenderer;
-typedef tesseract::TessTextRenderer TessTextRenderer;
-typedef tesseract::TessHOcrRenderer TessHOcrRenderer;
-typedef tesseract::TessAltoRenderer TessAltoRenderer;
-typedef tesseract::TessTsvRenderer TessTsvRenderer;
-typedef tesseract::TessPDFRenderer TessPDFRenderer;
-typedef tesseract::TessUnlvRenderer TessUnlvRenderer;
-typedef tesseract::TessBoxTextRenderer TessBoxTextRenderer;
-typedef tesseract::TessWordStrBoxRenderer TessWordStrBoxRenderer;
-typedef tesseract::TessLSTMBoxRenderer TessLSTMBoxRenderer;
 typedef tesseract::TessBaseAPI TessBaseAPI;
 typedef tesseract::PageIterator TessPageIterator;
 typedef tesseract::ResultIterator TessResultIterator;
@@ -78,11 +69,6 @@ typedef tesseract::TextlineOrder TessTextlineOrder;
 typedef PolyBlockType TessPolyBlockType;
 #else
 typedef struct TessResultRenderer TessResultRenderer;
-typedef struct TessTextRenderer TessTextRenderer;
-typedef struct TessHOcrRenderer TessHOcrRenderer;
-typedef struct TessPDFRenderer TessPDFRenderer;
-typedef struct TessUnlvRenderer TessUnlvRenderer;
-typedef struct TessBoxTextRenderer TessBoxTextRenderer;
 typedef struct TessBaseAPI TessBaseAPI;
 typedef struct TessPageIterator TessPageIterator;
 typedef struct TessResultIterator TessResultIterator;
@@ -537,40 +523,6 @@ TESS_API void TessMonitorSetProgressFunc(ETEXT_DESC* monitor,
                                          TessProgressFunc progressFunc);
 TESS_API int TessMonitorGetProgress(ETEXT_DESC* monitor);
 TESS_API void TessMonitorSetDeadlineMSecs(ETEXT_DESC* monitor, int deadline);
-
-#ifndef DISABLED_LEGACY_ENGINE
-
-#  ifdef TESS_CAPI_INCLUDE_BASEAPI
-TESS_API void TessBaseAPISetFillLatticeFunc(TessBaseAPI* handle,
-                                            TessFillLatticeFunc f);
-
-TESS_API void TessBaseAPIGetFeaturesForBlob(TessBaseAPI* handle, TBLOB* blob,
-                                            INT_FEATURE_STRUCT* int_features,
-                                            int* num_features,
-                                            int* FeatureOutlineIndex);
-
-TESS_API ROW* TessFindRowForBox(BLOCK_LIST* blocks, int left, int top,
-                                int right, int bottom);
-
-TESS_API void TessBaseAPIRunAdaptiveClassifier(TessBaseAPI* handle, TBLOB* blob,
-                                               int num_max_matches,
-                                               int* unichar_ids, float* ratings,
-                                               int* num_matches_returned);
-
-TESS_API ROW* TessMakeTessOCRRow(float baseline, float xheight, float descender,
-                                 float ascender);
-
-TESS_API TBLOB* TessMakeTBLOB(Pix* pix);
-
-TESS_API void TessNormalizeTBLOB(TBLOB* tblob, ROW* row, BOOL numeric_mode);
-
-TESS_API BLOCK_LIST* TessBaseAPIFindLinesCreateBlockList(TessBaseAPI* handle);
-
-TESS_API void TessDeleteBlockList(BLOCK_LIST* block_list);
-
-#  endif  // def TESS_CAPI_INCLUDE_BASEAPI
-
-#endif  // ndef DISABLED_LEGACY_ENGINE
 
 #ifdef __cplusplus
 }

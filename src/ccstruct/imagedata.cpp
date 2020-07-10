@@ -24,11 +24,9 @@
 #include "imagedata.h"
 
 #include <cinttypes>     // for PRId64
-#include <thread>        // for std::thread
 
 #include "allheaders.h"  // for pixDestroy, pixGetHeight, pixGetWidth, lept_...
 #include "boxread.h"     // for ReadMemBoxes
-#include "callcpp.h"     // for window_wait
 #include <tesseract/helpers.h>     // for IntCastRounded, TRand, ClipToRange, Modulo
 #include "rect.h"        // for TBOX
 #include "scrollview.h"  // for ScrollView, ScrollView::CYAN, ScrollView::NONE
@@ -86,6 +84,7 @@ bool WordFeature::Serialize(FILE* fp) const {
 }
 
 // Reads from the given file. Returns false in case of error.
+// If swap is true, assumes a big/little-endian swap is needed.
 bool WordFeature::DeSerialize(bool swap, FILE* fp) {
   if (!tesseract::DeSerialize(fp, &x_)) return false;
   if (swap) ReverseN(&x_, sizeof(x_));
@@ -173,7 +172,6 @@ bool ImageData::Serialize(TFile* fp) const {
 }
 
 // Reads from the given file. Returns false in case of error.
-// If swap is true, assumes a big/little-endian swap is needed.
 bool ImageData::DeSerialize(TFile* fp) {
   if (!imagefilename_.DeSerialize(fp)) return false;
   if (!fp->DeSerialize(&page_number_)) return false;
@@ -207,12 +205,28 @@ bool ImageData::SkipDeSerialize(TFile* fp) {
 // In case of missing PNG support in Leptonica use PNM format,
 // which requires more memory.
 void ImageData::SetPix(Pix* pix) {
+#ifdef TESSERACT_IMAGEDATA_AS_PIX
+  internal_pix_ = pix;
+#else
   SetPixInternal(pix, &image_data_);
+#endif
 }
 
 // Returns the Pix image for *this. Must be pixDestroyed after use.
 Pix* ImageData::GetPix() const {
+#ifdef TESSERACT_IMAGEDATA_AS_PIX
+#ifdef GRAPHICS_DISABLED
+  /* The only caller of this is the scaling functions to prescale the
+   * source. Thus we can just return a new pointer to the same data. */
+  return pixClone(internal_pix_);
+#else
+  /* pixCopy always does an actual copy, so the caller can modify the
+   * changed data. */
+  return pixCopy(NULL, internal_pix_);
+#endif
+#else
   return GetPixInternal(image_data_);
+#endif
 }
 
 // Gets anything and everything with a non-nullptr pointer, prescaled to a
@@ -243,6 +257,8 @@ Pix* ImageData::PreScale(int target_height, int max_height, float* scale_factor,
   if (pix == nullptr) {
     tprintf("Scaling pix of size %d, %d by factor %g made null pix!!\n",
             input_width, input_height, im_factor);
+    pixDestroy(&src_pix);
+    return nullptr;
   }
   if (scaled_width != nullptr) *scaled_width = pixGetWidth(pix);
   if (scaled_height != nullptr) *scaled_height = pixGetHeight(pix);
@@ -302,7 +318,7 @@ void ImageData::Display() const {
     win->Text(0, height + kTextSize * 2, transcription_.c_str());
   }
   win->Update();
-  window_wait(win);
+  win->Wait();
 #endif
 }
 
@@ -320,6 +336,7 @@ void ImageData::AddBoxes(const GenericVector<TBOX>& boxes,
   }
 }
 
+#ifndef TESSERACT_IMAGEDATA_AS_PIX
 // Saves the given Pix as a PNG-encoded string and destroys it.
 // In case of missing PNG support in Leptonica use PNM format,
 // which requires more memory.
@@ -348,6 +365,7 @@ Pix* ImageData::GetPixInternal(const GenericVector<char>& image_data) {
   }
   return pix;
 }
+#endif
 
 // Parses the text string as a box file and adds any discovered boxes that
 // match the page number. Returns false on error.
@@ -378,6 +396,9 @@ DocumentData::DocumentData(const STRING& name)
       reader_(nullptr) {}
 
 DocumentData::~DocumentData() {
+  if (thread.joinable()) {
+    thread.join();
+  }
   std::lock_guard<std::mutex> lock_p(pages_mutex_);
   std::lock_guard<std::mutex> lock_g(general_mutex_);
 }
@@ -436,8 +457,10 @@ void DocumentData::LoadPageInBackground(int index) {
   if (pages_offset_ == index) return;
   pages_offset_ = index;
   pages_.clear();
-  std::thread t(&tesseract::DocumentData::ReCachePages, this);
-  t.detach();
+  if (thread.joinable()) {
+    thread.join();
+  }
+  thread = std::thread(&tesseract::DocumentData::ReCachePages, this);
 }
 
 // Returns a pointer to the page with the given index, modulo the total
@@ -516,7 +539,7 @@ bool DocumentData::ReCachePages() {
   int loaded_pages = 0;
   pages_.truncate(0);
   TFile fp;
-  if (!fp.Open(document_name_, reader_) ||
+  if (!fp.Open(document_name_.c_str(), reader_) ||
       !PointerVector<ImageData>::DeSerializeSize(&fp, &loaded_pages) ||
       loaded_pages <= 0) {
     tprintf("Deserialize header failed: %s\n", document_name_.c_str());

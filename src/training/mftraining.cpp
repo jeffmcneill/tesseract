@@ -55,34 +55,30 @@ using tesseract::MasterTrainer;
 using tesseract::Shape;
 using tesseract::ShapeTable;
 
-// Max length of a fake shape label.
-const int kMaxShapeLabelLength = 10;
-
 /*----------------------------------------------------------------------------
             Public Code
 -----------------------------------------------------------------------------*/
 #ifndef GRAPHICS_DISABLED
 static void DisplayProtoList(const char* ch, LIST protolist) {
-  void* window = c_create_window("Char samples", 50, 200,
-                                 520, 520, -130.0, 130.0, -130.0, 130.0);
+  auto window = new ScrollView("Char samples", 50, 200, 520, 520, 260, 260, true);
   LIST proto = protolist;
   iterate(proto) {
     PROTOTYPE* prototype = reinterpret_cast<PROTOTYPE *>(first_node(proto));
     if (prototype->Significant)
-      c_line_color_index(window, Green);
+      window->Pen(ScrollView::GREEN);
     else if (prototype->NumSamples == 0)
-      c_line_color_index(window, Blue);
+      window->Pen(ScrollView::BLUE);
     else if (prototype->Merged)
-      c_line_color_index(window, Magenta);
+      window->Pen(ScrollView::MAGENTA);
     else
-      c_line_color_index(window, Red);
+      window->Pen(ScrollView::RED);
     float x = CenterX(prototype->Mean);
     float y = CenterY(prototype->Mean);
     double angle = OrientationOf(prototype->Mean) * 2 * M_PI;
     float dx = static_cast<float>(LengthOf(prototype->Mean) * cos(angle) / 2);
     float dy = static_cast<float>(LengthOf(prototype->Mean) * sin(angle) / 2);
-    c_move(window, (x - dx) * 256, (y - dy) * 256);
-    c_draw(window, (x + dx) * 256, (y + dy) * 256);
+    window->SetCursor((x - dx) * 256, (y - dy) * 256);
+    window->DrawTo((x + dx) * 256, (y + dy) * 256);
     if (prototype->Significant)
       tprintf("Green proto at (%g,%g)+(%g,%g) %d samples\n",
               x, y, dx, dy, prototype->NumSamples);
@@ -90,7 +86,7 @@ static void DisplayProtoList(const char* ch, LIST protolist) {
       tprintf("Red proto at (%g,%g)+(%g,%g) %d samples\n",
               x, y, dx, dy, prototype->NumSamples);
   }
-  c_make_current(window);
+  window->Update();
 }
 #endif  // GRAPHICS_DISABLED
 
@@ -242,8 +238,8 @@ int main (int argc, char **argv) {
     // output modules happy that we are doing things correctly.
     int num_shapes = config_map.CompactSize();
     for (int s = 0; s < num_shapes; ++s) {
-      char shape_label[kMaxShapeLabelLength + 1];
-      snprintf(shape_label, kMaxShapeLabelLength, "sh%04d", s);
+      char shape_label[14];
+      snprintf(shape_label, sizeof(shape_label), "sh%04d", s);
       shape_set.unichar_insert(shape_label);
     }
   }

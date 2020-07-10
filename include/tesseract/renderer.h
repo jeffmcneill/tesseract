@@ -39,7 +39,7 @@ class TessBaseAPI;
  * formats. This interface is then used to inject the renderer class into
  * tesseract when processing images.
  *
- * For simplicity implementing this with tesesract version 3.01,
+ * For simplicity implementing this with tesseract version 3.01,
  * the renderer contains document state that is cleared from document
  * to document just as the TessBaseAPI is. This way the base API can just
  * delegate its rendering functionality to injected renderers, and the
@@ -143,7 +143,7 @@ class TESS_API TessResultRenderer {
 
  private:
   const char* file_extension_;  // standard extension for generated output
-  STRING title_;                // title of document being renderered
+  STRING title_;                // title of document being rendered
   int imagenum_;                // index of last image added
 
   FILE* fout_;                // output file pointer

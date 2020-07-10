@@ -1,5 +1,4 @@
-/* -*-C-*-
- ********************************************************************************
+/******************************************************************************
  *
  * File:        trie.h
  * Description: Functions to build a trie data structure.
@@ -16,7 +15,7 @@
  ** See the License for the specific language governing permissions and
  ** limitations under the License.
  *
- *********************************************************************************/
+ *****************************************************************************/
 #ifndef TRIE_H
 #define TRIE_H
 
@@ -198,7 +197,7 @@ class Trie : public Dawg {
   // To denote a character class use one of:
   // \c - unichar for which UNICHARSET::get_isalpha() is true (character)
   // \d - unichar for which UNICHARSET::get_isdigit() is true
-  // \n - unichar for which UNICHARSET::get_isdigit() and
+  // \n - unichar for which UNICHARSET::get_isdigit() or
   //      UNICHARSET::isalpha() are true
   // \p - unichar for which UNICHARSET::get_ispunct() is true
   // \a - unichar for which UNICHARSET::get_islower() is true

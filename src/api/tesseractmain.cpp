@@ -41,6 +41,9 @@
 #if defined(HAVE_LIBARCHIVE)
 #include <archive.h>
 #endif
+#if defined(HAVE_LIBCURL)
+#include <curl/curl.h>
+#endif
 
 #if defined(_WIN32)
 #include <fcntl.h>
@@ -132,12 +135,16 @@ static void PrintVersionInfo() {
     }
   }
 #endif
+#if defined(HAVE_NEON)
+  if (tesseract::SIMDDetect::IsNEONAvailable()) printf(" Found NEON\n");
+#else
   if (tesseract::SIMDDetect::IsAVX512BWAvailable()) printf(" Found AVX512BW\n");
   if (tesseract::SIMDDetect::IsAVX512FAvailable()) printf(" Found AVX512F\n");
   if (tesseract::SIMDDetect::IsAVX2Available()) printf(" Found AVX2\n");
   if (tesseract::SIMDDetect::IsAVXAvailable()) printf(" Found AVX\n");
   if (tesseract::SIMDDetect::IsFMAAvailable()) printf(" Found FMA\n");
   if (tesseract::SIMDDetect::IsSSEAvailable()) printf(" Found SSE\n");
+#endif
 #ifdef _OPENMP
   printf(" Found OpenMP %d\n", _OPENMP);
 #endif
@@ -148,7 +155,9 @@ static void PrintVersionInfo() {
   printf(" Found %s\n", archive_version_string());
 #  endif  // ARCHIVE_VERSION_NUMBER
 #endif    // HAVE_LIBARCHIVE
-
+#if defined(HAVE_LIBCURL)
+  printf(" Found %s\n", curl_version());
+#endif
 }
 
 static void PrintHelpForPSM() {

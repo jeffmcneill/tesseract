@@ -1,5 +1,4 @@
-/* -*-C-*-
- ********************************************************************************
+/******************************************************************************
  *
  * File:         matrix.cpp  (Formerly matrix.c)
  * Description:  Ratings matrix code. (Used by associator)
@@ -16,13 +15,12 @@
  ** See the License for the specific language governing permissions and
  ** limitations under the License.
  *
- *********************************************************************************/
+ *****************************************************************************/
 /*----------------------------------------------------------------------
               I n c l u d e s
 ----------------------------------------------------------------------*/
 #include "matrix.h"
 
-#include "callcpp.h"
 #include "ratngs.h"
 #include "tprintf.h"
 #include "unicharset.h"

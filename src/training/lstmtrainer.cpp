@@ -38,8 +38,6 @@
 #endif
 #include "tprintf.h"
 
-#include "callcpp.h"
-
 namespace tesseract {
 
 // Min actual error rate increase to constitute divergence.
@@ -892,7 +890,7 @@ bool LSTMTrainer::ReadLocalTrainingDump(const TessdataManager* mgr,
 }
 
 // Writes the full recognition traineddata to the given filename.
-bool LSTMTrainer::SaveTraineddata(const STRING& filename) {
+bool LSTMTrainer::SaveTraineddata(const char* filename) {
   GenericVector<char> recognizer_data;
   SaveRecognitionDump(&recognizer_data);
   mgr_.OverwriteEntry(TESSDATA_LSTM, &recognizer_data[0],

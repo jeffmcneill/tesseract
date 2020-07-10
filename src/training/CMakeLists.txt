@@ -37,10 +37,10 @@ if (MSVC AND NOT SW_BUILD AND NOT USE_SYSTEM_ICU)
     message(STATUS "Downloading latest ICU binaries")
 
     file(DOWNLOAD
-        "http://download.icu-project.org/files/icu4c/56.1/icu4c-56_1-Win${ARCH_DIR_NAME}-msvc10.zip"
+        "https://github.com/unicode-org/icu/releases/download/release-56-1/icu4c-56_1-Win${ARCH_DIR_NAME}-msvc10.zip"
         "${icu_archive}"
         SHOW_PROGRESS
-        INACTIVITY_TIMEOUT 60 # seconds
+        INACTIVITY_TIMEOUT 300 # seconds
         EXPECTED_HASH MD5=${icu_hash}
     )
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar xz "${icu_archive}"
@@ -78,6 +78,12 @@ set(common_training_src
     commontraining.h
     ctc.cpp
     ctc.h
+    networkbuilder.cpp
+    networkbuilder.h
+)
+
+if (NOT DISABLED_LEGACY_ENGINE)
+list(APPEND common_training_src
     errorcounter.cpp
     errorcounter.h
     intfeaturedist.cpp
@@ -86,36 +92,39 @@ set(common_training_src
     intfeaturemap.h
     mastertrainer.cpp
     mastertrainer.h
-    networkbuilder.cpp
-    networkbuilder.h
     sampleiterator.cpp
     sampleiterator.h
     trainingsampleset.cpp
     trainingsampleset.h
 )
+endif()
+
 add_library                 (common_training ${common_training_src})
 target_link_libraries       (common_training libtesseract tessopt)
 project_group               (common_training "Training Tools")
-
 
 ########################################
 # EXECUTABLE ambiguous_words
 ########################################
 
+if (NOT DISABLED_LEGACY_ENGINE)
 add_executable              (ambiguous_words ambiguous_words.cpp)
 target_link_libraries       (ambiguous_words libtesseract)
 project_group               (ambiguous_words "Training Tools")
 install                     (TARGETS ambiguous_words RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+endif()
 
 
 ########################################
 # EXECUTABLE classifier_tester
 ########################################
 
+if (NOT DISABLED_LEGACY_ENGINE)
 add_executable              (classifier_tester classifier_tester.cpp)
 target_link_libraries       (classifier_tester common_training)
 project_group               (classifier_tester "Training Tools")
 install                     (TARGETS classifier_tester RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+endif()
 
 
 ########################################
@@ -132,10 +141,12 @@ install                     (TARGETS combine_tessdata RUNTIME DESTINATION bin LI
 # EXECUTABLE cntraining
 ########################################
 
+if (NOT DISABLED_LEGACY_ENGINE)
 add_executable              (cntraining cntraining.cpp)
 target_link_libraries       (cntraining common_training)
 project_group               (cntraining "Training Tools")
 install                     (TARGETS cntraining RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+endif()
 
 
 ########################################
@@ -152,20 +163,24 @@ install                     (TARGETS dawg2wordlist RUNTIME DESTINATION bin LIBRA
 # EXECUTABLE mftraining
 ########################################
 
+if (NOT DISABLED_LEGACY_ENGINE)
 add_executable              (mftraining mftraining.cpp mergenf.cpp mergenf.h)
 target_link_libraries       (mftraining common_training)
 project_group               (mftraining "Training Tools")
 install                     (TARGETS mftraining RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+endif()
 
 
 ########################################
 # EXECUTABLE shapeclustering
 ########################################
 
+if (NOT DISABLED_LEGACY_ENGINE)
 add_executable              (shapeclustering shapeclustering.cpp)
 target_link_libraries       (shapeclustering common_training)
 project_group               (shapeclustering "Training Tools")
 install                     (TARGETS shapeclustering RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+endif()
 
 
 ########################################

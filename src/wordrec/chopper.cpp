@@ -1,5 +1,4 @@
-/* -*-C-*-
- ********************************************************************************
+/******************************************************************************
  *
  * File:         chopper.cpp  (Formerly chopper.c)
  * Author:       Mark Seaman, OCR Technology
@@ -15,7 +14,7 @@
  ** See the License for the specific language governing permissions and
  ** limitations under the License.
  *
- **************************************************************************/
+ *****************************************************************************/
 
 /*----------------------------------------------------------------------
           I n c l u d e s
@@ -23,7 +22,6 @@
 
 #include "blamer.h"    // for BlamerBundle, IRR_CORRECT
 #include "blobs.h"     // for TPOINT, TBLOB, EDGEPT, TESSLINE, divisible_blob
-#include "callcpp.h"   // for Red
 #include "dict.h"      // for Dict
 #include "lm_pain_points.h" // for LMPainPoints
 #include "lm_state.h"  // for BestChoiceBundle
@@ -188,7 +186,7 @@ static SEAM* CheckSeam(int debug_level, int32_t blob_number, TWERD* word,
 #ifndef GRAPHICS_DISABLED
       if (debug_level) {
         if (debug_level >2)
-          display_blob(blob, Red);
+          display_blob(blob, ScrollView::RED);
         tprintf("\n** seam being removed ** \n");
       }
 #endif
@@ -554,7 +552,7 @@ int Wordrec::select_blob_to_split(
   }
 
   if (split_next_to_fragment && blob_choices.size() > 0) {
-    fragments = new const CHAR_FRAGMENT *[blob_choices.length()];
+    fragments = new const CHAR_FRAGMENT *[blob_choices.size()];
     if (blob_choices[0] != nullptr) {
       fragments[0] = getDict().getUnicharset().get_fragment(
           blob_choices[0]->unichar_id());

@@ -15,6 +15,9 @@
 // limitations under the License.
 ///////////////////////////////////////////////////////////////////////
 
+#ifdef HAVE_CONFIG_H
+#include "config_auto.h"     // for HAVE_AVX, ...
+#endif
 #include <numeric>           // for std::inner_product
 #include "simddetect.h"
 #include "dotproduct.h"
@@ -22,7 +25,7 @@
 #include "params.h"   // for STRING_VAR
 #include "tprintf.h"  // for tprintf
 
-#if defined(AVX) || defined(AVX2) || defined(FMA) || defined(SSE4_1)
+#if defined(HAVE_AVX) || defined(HAVE_AVX2) || defined(HAVE_FMA) || defined(HAVE_SSE4_1)
 # define HAS_CPUID
 #endif
 
@@ -31,6 +34,16 @@
 # include <cpuid.h>
 #elif defined(_WIN32)
 # include <intrin.h>
+#endif
+#endif
+
+#ifdef HAVE_NEON
+#ifdef ANDROID
+#include <cpufeatures.h>
+#else
+/* Assume linux */
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
 #endif
 #endif
 
@@ -53,6 +66,10 @@ static STRING_VAR(dotproduct, "auto",
 
 SIMDDetect SIMDDetect::detector;
 
+#if defined(HAVE_NEON)
+// If true, then Neon has been detected.
+bool SIMDDetect::neon_available_;
+#else
 // If true, then AVX has been detected.
 bool SIMDDetect::avx_available_;
 bool SIMDDetect::avx2_available_;
@@ -62,6 +79,7 @@ bool SIMDDetect::avx512BW_available_;
 bool SIMDDetect::fma_available_;
 // If true, then SSe4.1 has been detected.
 bool SIMDDetect::sse_available_;
+#endif
 
 // Computes and returns the dot product of the two n-vectors u and v.
 static double DotProductGeneric(const double* u, const double* v, int n) {
@@ -95,22 +113,32 @@ SIMDDetect::SIMDDetect() {
   if (__get_cpuid(1, &eax, &ebx, &ecx, &edx) != 0) {
     // Note that these tests all use hex because the older compilers don't have
     // the newer flags.
-#if defined(SSE4_1)
+#if defined(HAVE_SSE4_1)
     sse_available_ = (ecx & 0x00080000) != 0;
 #endif
-#if defined(FMA)
-    fma_available_ = (ecx & 0x00001000) != 0;
+#if defined(HAVE_AVX) || defined(HAVE_AVX2) || defined(HAVE_FMA)
+    auto xgetbv = []() {
+      uint32_t xcr0;
+      __asm__("xgetbv" : "=a" (xcr0) : "c" (0) : "%edx");
+      return xcr0;
+    };
+    if ((ecx & 0x08000000) && ((xgetbv() & 6) == 6)) {
+      // OSXSAVE bit is set, XMM state and YMM state are fine.
+#if defined(HAVE_FMA)
+      fma_available_ = (ecx & 0x00001000) != 0;
 #endif
-#if defined(AVX)
-    avx_available_ = (ecx & 0x10000000) != 0;
-    if (avx_available_) {
-      // There is supposed to be a __get_cpuid_count function, but this is all
-      // there is in my cpuid.h. It is a macro for an asm statement and cannot
-      // be used inside an if.
-      __cpuid_count(7, 0, eax, ebx, ecx, edx);
-      avx2_available_ = (ebx & 0x00000020) != 0;
-      avx512F_available_ = (ebx & 0x00010000) != 0;
-      avx512BW_available_ = (ebx & 0x40000000) != 0;
+#if defined(HAVE_AVX)
+      avx_available_ = (ecx & 0x10000000) != 0;
+      if (avx_available_) {
+        // There is supposed to be a __get_cpuid_count function, but this is all
+        // there is in my cpuid.h. It is a macro for an asm statement and cannot
+        // be used inside an if.
+        __cpuid_count(7, 0, eax, ebx, ecx, edx);
+        avx2_available_ = (ebx & 0x00000020) != 0;
+        avx512F_available_ = (ebx & 0x00010000) != 0;
+        avx512BW_available_ = (ebx & 0x40000000) != 0;
+      }
+#endif
     }
 #endif
   }
@@ -121,19 +149,19 @@ SIMDDetect::SIMDDetect() {
   max_function_id = cpuInfo[0];
   if (max_function_id >= 1) {
     __cpuid(cpuInfo, 1);
-#if defined(SSE4_1)
+#if defined(HAVE_SSE4_1)
     sse_available_ = (cpuInfo[2] & 0x00080000) != 0;
 #endif
-#if defined(AVX) || defined(AVX2) || defined(FMA)
+#if defined(HAVE_AVX) || defined(HAVE_AVX2) || defined(HAVE_FMA)
     if ((cpuInfo[2] & 0x08000000) && ((_xgetbv(0) & 6) == 6)) {
       // OSXSAVE bit is set, XMM state and YMM state are fine.
-#if defined(FMA)
+#if defined(HAVE_FMA)
       fma_available_ = (cpuInfo[2] & 0x00001000) != 0;
 #endif
-#if defined(AVX)
+#if defined(HAVE_AVX)
       avx_available_ = (cpuInfo[2] & 0x10000000) != 0;
 #endif
-#if defined(AVX2)
+#if defined(HAVE_AVX2)
       if (max_function_id >= 7) {
         __cpuid(cpuInfo, 7);
         avx2_available_ = (cpuInfo[1] & 0x00000020) != 0;
@@ -149,23 +177,49 @@ SIMDDetect::SIMDDetect() {
 #endif
 #endif
 
+#ifdef HAVE_NEON
+#ifdef ANDROID
+  {
+    AndroidCpuFamily family = android_getCpuFamily();
+    if (family == ANDROID_CPU_FAMILY_ARM)
+      neon_available_ = (android_getCpuFeatures() &
+                         ANDROID_CPU_ARM_FEATURE_NEON);
+#if 0
+    /* There is no NEON flag to test on ARM64. A wild guess would have
+     * it being the ASIMD flag, but I'll leave this disabled for now. */
+    else if (family == ANDROID_CPU_FAMILY_ARM64)
+      neon_available_ = (android_getCpuFeatures() &
+                         ANDROID_CPU_ARM64_FEATURE_ASIMD);
+#endif
+  }
+#else
+  /* Assume linux */
+  neon_available_ = getauxval(AT_HWCAP) & HWCAP_NEON;
+#endif
+#endif
+
   // Select code for calculation of dot product based on autodetection.
   if (false) {
     // This is a dummy to support conditional compilation.
-#if defined(AVX2)
+#if defined(HAVE_AVX2)
   } else if (avx2_available_) {
     // AVX2 detected.
     SetDotProduct(DotProductAVX, &IntSimdMatrix::intSimdMatrixAVX2);
 #endif
-#if defined(AVX)
+#if defined(HAVE_AVX)
   } else if (avx_available_) {
     // AVX detected.
     SetDotProduct(DotProductAVX, &IntSimdMatrix::intSimdMatrixSSE);
 #endif
-#if defined(SSE4_1)
+#if defined(HAVE_SSE4_1)
   } else if (sse_available_) {
     // SSE detected.
     SetDotProduct(DotProductSSE, &IntSimdMatrix::intSimdMatrixSSE);
+#endif
+#if defined(HAVE_NEON)
+  } else if (neon_available_) {
+    // NEON detected.
+    SetDotProduct(DotProduct, &IntSimdMatrix::intSimdMatrixNEON);
 #endif
   }
 }
@@ -184,25 +238,25 @@ void SIMDDetect::Update() {
     // Native optimized code selected by config variable.
     SetDotProduct(DotProductNative);
     dotproduct_method = "native";
-#if defined(AVX2)
+#if defined(HAVE_AVX2)
   } else if (!strcmp(dotproduct.c_str(), "avx2")) {
     // AVX2 selected by config variable.
     SetDotProduct(DotProductAVX, &IntSimdMatrix::intSimdMatrixAVX2);
     dotproduct_method = "avx2";
 #endif
-#if defined(AVX)
+#if defined(HAVE_AVX)
   } else if (!strcmp(dotproduct.c_str(), "avx")) {
     // AVX selected by config variable.
     SetDotProduct(DotProductAVX, &IntSimdMatrix::intSimdMatrixSSE);
     dotproduct_method = "avx";
 #endif
-#if defined(FMA)
+#if defined(HAVE_FMA)
   } else if (!strcmp(dotproduct.c_str(), "fma")) {
     // FMA selected by config variable.
     SetDotProduct(DotProductFMA, IntSimdMatrix::intSimdMatrix);
     dotproduct_method = "fma";
 #endif
-#if defined(SSE4_1)
+#if defined(HAVE_SSE4_1)
   } else if (!strcmp(dotproduct.c_str(), "sse")) {
     // SSE selected by config variable.
     SetDotProduct(DotProductSSE, &IntSimdMatrix::intSimdMatrixSSE);
@@ -217,10 +271,10 @@ void SIMDDetect::Update() {
     tprintf("Warning, ignoring unsupported config variable value: dotproduct=%s\n",
             dotproduct.c_str());
     tprintf("Support values for dotproduct: auto generic native"
-#if defined(AVX)
+#if defined(HAVE_AVX)
             " avx"
 #endif
-#if defined(SSE4_1)
+#if defined(HAVE_SSE4_1)
             " sse"
 #endif
             " std::inner_product.\n");

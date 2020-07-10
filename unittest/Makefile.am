@@ -41,6 +41,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/unittest/base
 AM_CPPFLAGS += -I$(top_srcdir)/unittest/util
 if ENABLE_TRAINING
 AM_CPPFLAGS += -I$(top_srcdir)/src/training
+AM_CPPFLAGS += $(pangocairo_CFLAGS)
 endif # ENABLE_TRAINING
 AM_CPPFLAGS += -I$(top_srcdir)/src/viewer
 AM_CPPFLAGS += -I$(top_srcdir)/src/wordrec
@@ -104,7 +105,7 @@ ABSEIL_LIBS = libabseil.la
 GTEST_LIBS =  libgtest.la libgtest_main.la -lpthread
 GMOCK_LIBS =  libgmock.la libgmock_main.la
 TESS_LIBS = $(GTEST_LIBS)
-TESS_LIBS += $(top_builddir)/src/api/libtesseract.la $(libarchive_LIBS)
+TESS_LIBS += $(top_builddir)/libtesseract.la $(libarchive_LIBS)
 TESS_LIBS += $(TENSORFLOW_LIBS)
 TRAINING_LIBS = $(top_builddir)/src/training/libtesseract_training.la
 TRAINING_LIBS += $(top_builddir)/src/training/libtesseract_tessopt.la
@@ -271,11 +272,11 @@ intfeaturemap_test_LDADD = $(TRAINING_LIBS)
 intsimdmatrix_test_SOURCES = intsimdmatrix_test.cc
 intsimdmatrix_test_LDADD = $(TESS_LIBS)
 intsimdmatrix_test_CPPFLAGS = $(AM_CPPFLAGS)
-if AVX2_OPT
-intsimdmatrix_test_CPPFLAGS += -DAVX2
+if HAVE_AVX2
+intsimdmatrix_test_CPPFLAGS += -DHAVE_AVX2
 endif
-if SSE41_OPT
-intsimdmatrix_test_CPPFLAGS += -DSSE4_1
+if HAVE_SSE4_1
+intsimdmatrix_test_CPPFLAGS += -DHAVE_SSE4_1
 endif
 
 lang_model_test_SOURCES = lang_model_test.cc
@@ -339,9 +340,9 @@ pango_font_info_test_SOURCES = pango_font_info_test.cc
 pango_font_info_test_SOURCES += third_party/utf/rune.c
 pango_font_info_test_SOURCES += util/utf8/unicodetext.cc util/utf8/unilib.cc
 pango_font_info_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
-pango_font_info_test_LDADD += $(ICU_I18N_LIBS) -lfontconfig
-pango_font_info_test_LDADD += -lpangocairo-1.0 -lpangoft2-1.0
-pango_font_info_test_LDADD += $(cairo_LIBS) $(pango_LIBS)
+pango_font_info_test_LDADD += $(ICU_I18N_LIBS)
+pango_font_info_test_LDADD += $(pangocairo_LIBS)
+pango_font_info_test_LDADD += $(pangoft2_LIBS)
 endif # TENSORFLOW
 
 paragraphs_test_SOURCES = paragraphs_test.cc

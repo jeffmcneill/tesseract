@@ -87,7 +87,7 @@ class SVEventHandler {
     virtual void Notify(const SVEvent* sve) { (void)sve; }
 };
 
-// The ScrollView class provides the expernal API to the scrollviewer process.
+// The ScrollView class provides the external API to the scrollviewer process.
 // The scrollviewer process manages windows and displays images, graphics and
 // text while allowing the user to zoom and scroll the windows arbitrarily.
 // Each ScrollView class instance represents one window, and stuff is drawn in
@@ -340,6 +340,8 @@ class ScrollView {
 // Returns the correct Y coordinate for a window, depending on whether it might
 // have to be flipped (by ySize).
   int TranslateYCoordinate(int y);
+
+  char Wait();
 
  private:
 // Transfers a binary Image.
